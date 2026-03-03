@@ -34,6 +34,7 @@ body {
     background: #f3f4f6;
     cursor: pointer;
     transition: 0.3s;
+    min-height: 120px;
 }
 
 .room-card:hover { transform: translateY(-5px); }
@@ -42,7 +43,21 @@ body {
 .checkedin { background: #43e97b; color: white; }
 .checkedout { background: #555; color: white; }
 
-.status { font-size: 12px; margin-top: 5px; }
+.room-number {
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+.guest-name {
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+.sub-info {
+    font-size: 12px;
+    margin-top: 5px;
+}
 
 .modal {
     display: none;
@@ -79,7 +94,7 @@ button {
 <body>
 
 <div class="container">
-<h2>🏨 房況管理</h2>
+<h2>🏨 住房資料</h2>
 選擇日期：
 <input type="date" id="selectedDate">
 <div class="room-grid" id="roomGrid"></div>
@@ -88,7 +103,10 @@ button {
 <div class="modal" id="formModal">
 <h3 id="modalTitle"></h3>
 
-姓名
+訂單編號
+<input id="orderNumber">
+
+客人姓名
 <input id="name">
 
 電話
@@ -120,6 +138,9 @@ button {
 <button onclick="setStatus('checkedin')">入住</button>
 <button onclick="setStatus('checkedout')">退房</button>
 <button onclick="closeModal()">關閉</button>
+<button onclick="deleteBooking()" style="background:#e74c3c;color:white;">
+取消訂單
+</button>
 </div>
 
 <script>
@@ -132,9 +153,11 @@ const grid = document.getElementById("roomGrid");
 rooms.forEach(room=>{
     const card = document.createElement("div");
     card.className="room-card";
-    card.innerHTML=`<strong>${room}</strong>
-                    <div class="guest"></div>
-                    <div class="status"></div>`;
+    card.innerHTML=`
+        <div class="room-number">房號 ${room}</div>
+        <div class="guest-name"></div>
+        <div class="sub-info"></div>
+    `;
     card.onclick=()=>openModal(room);
     grid.appendChild(card);
 });
@@ -155,6 +178,7 @@ function openModal(room){
 
     const data = bookings[selectedDate.value]?.[room];
     if(data){
+        orderNumber.value=data.orderNumber;
         name.value=data.name;
         phone.value=data.phone;
         people.value=data.people;
@@ -175,20 +199,26 @@ function closeModal(){
 }
 
 function save(){
-    const date=selectedDate.value;
-    if(!bookings[date]) bookings[date]={};
 
-    bookings[date][currentRoom]={
-        name:name.value,
-        phone:phone.value,
-        people:people.value,
-        orderDate:orderDate.value,
-        total:total.value,
-        deposit:deposit.value,
-        balance:balance.value,
-        country:country.value,
-        request:request.value,
-        status:"booked"
+    const date = document.getElementById("selectedDate").value;
+
+    if(!bookings[date]) bookings[date] = {};
+
+    const nameValue = document.getElementById("name").value.trim();
+    const orderNumberValue = document.getElementById("orderNumber").value.trim();
+
+    bookings[date][currentRoom] = {
+        orderNumber: orderNumberValue,
+        name: nameValue,
+        phone: document.getElementById("phone").value,
+        people: document.getElementById("people").value,
+        orderDate: document.getElementById("orderDate").value,
+        total: document.getElementById("total").value,
+        deposit: document.getElementById("deposit").value,
+        balance: document.getElementById("balance").value,
+        country: document.getElementById("country").value,
+        request: document.getElementById("request").value,
+        status: "booked"
     };
 
     updateUI();
@@ -204,20 +234,58 @@ function setStatus(status){
     }
 }
 
+function deleteBooking(){
+
+    const date = document.getElementById("selectedDate").value;
+
+    if(bookings[date] && bookings[date][currentRoom]){
+
+        if(confirm("確定要取消此訂單嗎？")){
+
+            delete bookings[date][currentRoom];
+
+            updateUI();
+            closeModal();
+        }
+    }
+}
+
 function updateUI(){
-    const date=selectedDate.value;
+    const date = selectedDate.value;
+
     document.querySelectorAll(".room-card").forEach((card,i)=>{
         card.classList.remove("booked","checkedin","checkedout");
-        card.querySelector(".guest").innerText="";
-        card.querySelector(".status").innerText="";
-        const room=rooms[i];
-        const data=bookings[date]?.[room];
+
+        const guestEl = card.querySelector(".guest-name");
+        const subEl = card.querySelector(".sub-info");
+
+        guestEl.innerText = "";
+        subEl.innerText = "";
+
+        const room = rooms[i];
+        const data = bookings[date]?.[room];
+
         if(data){
-            card.classList.add(data.status);
-            card.querySelector(".guest").innerText=data.name;
-            if(data.status==="booked") card.querySelector(".status").innerText="🟡 已預訂";
-            if(data.status==="checkedin") card.querySelector(".status").innerText="🟢 已入住";
-            if(data.status==="checkedout") card.querySelector(".status").innerText="⚫ 已退房";
+
+            // ⭐ 防止 undefined
+            const guestName = data.name ? data.name : "（未填姓名）";
+            const orderNo = data.orderNumber ? data.orderNumber : "未填編號";
+
+            card.classList.add(data.status || "booked");
+
+            guestEl.innerText = guestName;
+
+            let statusText="";
+            if(data.status==="booked") statusText="🟡 已預訂";
+            else if(data.status==="checkedin") statusText="🟢 已入住";
+            else if(data.status==="checkedout") statusText="⚫ 已退房";
+            else statusText="🟡 已預訂";
+
+            subEl.innerText = "訂單編號："+orderNo+" ｜ "+statusText;
+        }else{
+    card.classList.remove("booked","checkedin","checkedout");
+    card.querySelector(".guest-name").innerText = "空房";
+    card.querySelector(".sub-info").innerText = "";
         }
     });
 }
