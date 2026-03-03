@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>房況管理系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; font-family: 'Noto Sans TC', sans-serif; }
+
+body {
+    margin: 0;
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    padding: 30px;
+}
+
+.container {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.room-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.room-card {
+    padding: 20px;
+    border-radius: 15px;
+    background: #f3f4f6;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.room-card:hover { transform: translateY(-5px); }
+
+.booked { background: #f6c453; color: white; }
+.checkedin { background: #43e97b; color: white; }
+.checkedout { background: #555; color: white; }
+
+.status { font-size: 12px; margin-top: 5px; }
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 450px;
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+input, textarea {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+button {
+    padding: 6px 12px;
+    margin-right: 5px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>🏨 房況管理</h2>
+選擇日期：
+<input type="date" id="selectedDate">
+<div class="room-grid" id="roomGrid"></div>
+</div>
+
+<div class="modal" id="formModal">
+<h3 id="modalTitle"></h3>
+
+姓名
+<input id="name">
+
+電話
+<input id="phone">
+
+入住人數
+<input id="people" type="number">
+
+訂單日期
+<input id="orderDate" type="date">
+
+總金額
+<input id="total" type="number">
+
+訂金
+<input id="deposit" type="number">
+
+餘額
+<input id="balance" type="number" readonly>
+
+國家
+<input id="country">
+
+需求
+<textarea id="request"></textarea>
+
+<br>
+<button onclick="save()">儲存</button>
+<button onclick="setStatus('checkedin')">入住</button>
+<button onclick="setStatus('checkedout')">退房</button>
+<button onclick="closeModal()">關閉</button>
+</div>
+
+<script>
+const rooms = ["201","202","203","301","302","303","401","402","403"];
+let bookings = {};
+let currentRoom = "";
+
+const grid = document.getElementById("roomGrid");
+
+rooms.forEach(room=>{
+    const card = document.createElement("div");
+    card.className="room-card";
+    card.innerHTML=`<strong>${room}</strong>
+                    <div class="guest"></div>
+                    <div class="status"></div>`;
+    card.onclick=()=>openModal(room);
+    grid.appendChild(card);
+});
+
+deposit.addEventListener("input",calcBalance);
+total.addEventListener("input",calcBalance);
+
+function calcBalance(){
+    balance.value = (Number(total.value)||0)-(Number(deposit.value)||0);
+}
+
+function openModal(room){
+    if(!selectedDate.value){ alert("請先選日期"); return; }
+
+    currentRoom=room;
+    modalTitle.innerText=room+" 房 - "+selectedDate.value;
+    formModal.style.display="block";
+
+    const data = bookings[selectedDate.value]?.[room];
+    if(data){
+        name.value=data.name;
+        phone.value=data.phone;
+        people.value=data.people;
+        orderDate.value=data.orderDate;
+        total.value=data.total;
+        deposit.value=data.deposit;
+        balance.value=data.balance;
+        country.value=data.country;
+        request.value=data.request;
+    }else{
+        document.querySelectorAll("#formModal input, #formModal textarea")
+        .forEach(i=>i.value="");
+    }
+}
+
+function closeModal(){
+    formModal.style.display="none";
+}
+
+function save(){
+    const date=selectedDate.value;
+    if(!bookings[date]) bookings[date]={};
+
+    bookings[date][currentRoom]={
+        name:name.value,
+        phone:phone.value,
+        people:people.value,
+        orderDate:orderDate.value,
+        total:total.value,
+        deposit:deposit.value,
+        balance:balance.value,
+        country:country.value,
+        request:request.value,
+        status:"booked"
+    };
+
+    updateUI();
+    closeModal();
+}
+
+function setStatus(status){
+    const date=selectedDate.value;
+    if(bookings[date]?.[currentRoom]){
+        bookings[date][currentRoom].status=status;
+        updateUI();
+        closeModal();
+    }
+}
+
+function updateUI(){
+    const date=selectedDate.value;
+    document.querySelectorAll(".room-card").forEach((card,i)=>{
+        card.classList.remove("booked","checkedin","checkedout");
+        card.querySelector(".guest").innerText="";
+        card.querySelector(".status").innerText="";
+        const room=rooms[i];
+        const data=bookings[date]?.[room];
+        if(data){
+            card.classList.add(data.status);
+            card.querySelector(".guest").innerText=data.name;
+            if(data.status==="booked") card.querySelector(".status").innerText="🟡 已預訂";
+            if(data.status==="checkedin") card.querySelector(".status").innerText="🟢 已入住";
+            if(data.status==="checkedout") card.querySelector(".status").innerText="⚫ 已退房";
+        }
+    });
+}
+
+selectedDate.addEventListener("change",updateUI);
+</script>
+
+</body>
+</html>
