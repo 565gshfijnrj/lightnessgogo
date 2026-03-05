@@ -82,12 +82,157 @@ input, textarea {
     border: 1px solid #ccc;
 }
 
+/* 日期欄位縮短 */
+input[type="date"]{
+    width: 160px;
+}
+
 button {
     padding: 6px 12px;
     margin-right: 5px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
+}
+
+.rest-section{
+margin-top:40px;
+background:white;
+padding:25px;
+border-radius:20px;
+box-shadow:0 10px 30px rgba(0,0,0,0.15);
+}
+
+.rest-form{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+}
+
+.rest-form textarea{
+grid-column:span 2;
+}
+
+.rest-form button{
+grid-column:span 2;
+background:#667eea;
+color:white;
+padding:10px;
+}
+
+.sectionTitle{
+margin-top:40px;
+font-size:22px;
+font-weight:bold;
+}
+
+#restCards{
+display:flex;
+flex-wrap:wrap;
+gap:15px;
+margin-top:15px;
+}
+
+.rest-card{
+background:#fff8e1;
+border-left:6px solid #ff9800;
+border-radius:10px;
+padding:15px;
+width:230px;
+box-shadow:0 3px 8px rgba(0,0,0,0.15);
+}
+
+.rest-room{
+font-size:20px;
+font-weight:bold;
+color:#ff6f00;
+margin-bottom:8px;
+}
+
+.rest-card button{
+margin-top:8px;
+background:#e53935;
+border:none;
+color:white;
+padding:5px 10px;
+border-radius:6px;
+cursor:pointer;
+}
+.rest-section{
+margin:50px auto;
+width:700px;
+background:#ffffff;
+border-radius:12px;
+padding:25px;
+box-shadow:0 5px 15px rgba(0,0,0,0.15);
+}
+
+.rest-title{
+font-size:22px;
+font-weight:bold;
+text-align:center;
+margin-bottom:20px;
+}
+
+.rest-input{
+display:grid;
+grid-template-columns: repeat(3,1fr);
+gap:12px;
+}
+
+.rest-input input,
+.rest-input select{
+padding:8px;
+border-radius:6px;
+border:1px solid #ccc;
+font-size:14px;
+}
+
+.rest-input button{
+grid-column: span 3;
+padding:10px;
+background:#1976d2;
+color:white;
+border:none;
+border-radius:8px;
+font-size:15px;
+cursor:pointer;
+}
+
+.rest-input button:hover{
+background:#0d47a1;
+}
+#restCards{
+display:flex;
+flex-wrap:wrap;
+gap:15px;
+justify-content:center;
+margin-top:20px;
+}
+
+.rest-card{
+width:230px;
+padding:15px;
+border-radius:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.15);
+}
+
+.resting{
+background:#ffe0b2;
+border-left:6px solid #fb8c00;
+}
+
+.checkout{
+background:#eeeeee;
+border-left:6px solid #9e9e9e;
+color:#666;
+opacity:0.8;
+}
+
+.rest-room{
+font-size:20px;
+font-weight:bold;
+margin-bottom:10px;
 }
 </style>
 </head>
@@ -97,41 +242,90 @@ button {
 <h2>🏨 住房資料</h2>
 選擇日期：
 <input type="date" id="selectedDate">
+
 <div class="room-grid" id="roomGrid"></div>
+</div>
+
+<div id="restCardsArea">
+
+<h2 class="sectionTitle">休息房況</h2>
+
+<div id="restCards"></div>
+
+</div>
+
+<div class="rest-section">
+
+<div class="rest-title">休息客登記</div>
+
+<div class="rest-input">
+
+<select id="restRoom">
+<option value="">選擇房號</option>
+<option>201</option>
+<option>202</option>
+<option>203</option>
+<option>301</option>
+<option>302</option>
+<option>303</option>
+<option>401</option>
+<option>402</option>
+<option>403</option>
+</select>
+
+<input id="restName" placeholder="顧客姓名">
+<input id="restPhone" placeholder="電話">
+<input id="restTime" placeholder="休息時間 (例:00:00~00:00)">
+<input id="restPrice" type="number" placeholder="金額">
+
+<input id="restID" placeholder="身分證">
+<input id="restBirth" placeholder="出生年月日">
+<input id="restNote" placeholder="備註">
+
+<button onclick="addRest()">新增休息客</button>
+
+</div>
+
 </div>
 
 <div class="modal" id="formModal">
 <h3 id="modalTitle"></h3>
 
 訂單編號
-<input id="orderNumber">
+<input id="orderNumber"><br>
 
 客人姓名
-<input id="name">
+<input id="name"><br>
 
 電話
-<input id="phone">
+<input id="phone"><br>
+
+身分證
+<input id="idNumber"><br>
+
+出生年月日
+<input type="date" id="birthday"><br>
 
 入住人數
-<input id="people" type="number">
+<input id="people" type="number"><br>
 
 訂單日期
-<input id="orderDate" type="date">
+<input id="orderDate" type="date"><br>
 
 總金額
-<input id="total" type="number">
+<input id="total" type="number"><br>
 
 訂金
-<input id="deposit" type="number">
+<input id="deposit" type="number"><br>
 
 餘額
-<input id="balance" type="number" readonly>
+<input id="balance" type="number" readonly><br>
 
 國家
-<input id="country">
+<input id="country"><br>
 
 需求
-<textarea id="request"></textarea>
+<textarea id="request"></textarea><br>
 
 <br>
 <button onclick="save()">儲存</button>
@@ -144,9 +338,13 @@ button {
 </div>
 
 <script>
+function getCurrentDate(){
+return document.getElementById("selectedDate").value
+}
 const rooms = ["201","202","203","301","302","303","401","402","403"];
 let bookings = {};
 let currentRoom = "";
+let restData = {}
 
 const grid = document.getElementById("roomGrid");
 
@@ -182,6 +380,8 @@ function openModal(room){
         name.value=data.name;
         phone.value=data.phone;
         people.value=data.people;
+        idNumber.value=data.idNumber;
+        birthday.value=data.birthday;
         orderDate.value=data.orderDate;
         total.value=data.total;
         deposit.value=data.deposit;
@@ -211,6 +411,8 @@ function save(){
         orderNumber: orderNumberValue,
         name: nameValue,
         phone: document.getElementById("phone").value,
+        idNumber: document.getElementById("idNumber").value,
+        birthday: document.getElementById("birthday").value,
         people: document.getElementById("people").value,
         orderDate: document.getElementById("orderDate").value,
         total: document.getElementById("total").value,
@@ -290,8 +492,107 @@ function updateUI(){
     });
 }
 
-selectedDate.addEventListener("change",updateUI);
-</script>
+selectedDate.addEventListener("change",()=>{
+updateUI()
+renderRest()
+});
 
+function addRest(){
+    
+let date = getCurrentDate()
+
+if(!date){
+alert("請先選擇日期")
+return
+}
+
+let room = document.getElementById("restRoom").value
+let name = document.getElementById("restName").value
+let phone = document.getElementById("restPhone").value
+let time = document.getElementById("restTime").value
+let price = document.getElementById("restPrice").value
+
+if(name=="" || room==""){
+alert("請填寫房號與姓名")
+return
+}
+
+let rest = {
+room:room,
+name:name,
+phone:phone,
+time:time,
+price:price,
+id:document.getElementById("restID").value,
+birth:document.getElementById("restBirth").value,
+note:document.getElementById("restNote").value,
+status:"resting"
+}
+
+if(!restData[date]){
+restData[date]=[]
+}
+
+restData[date].push(rest)
+
+renderRest()
+
+// 清空輸入欄位
+document.getElementById("restRoom").value=""
+document.getElementById("restName").value=""
+document.getElementById("restPhone").value=""
+document.getElementById("restTime").value=""
+document.getElementById("restPrice").value=""
+document.getElementById("restID").value=""
+document.getElementById("restBirth").value=""
+document.getElementById("restNote").value=""
+
+}
+function renderRest(){
+
+let date = getCurrentDate()
+
+let area = document.getElementById("restCards")
+area.innerHTML=""
+
+if(!restData[date]) return
+
+restData[date].forEach((r,i)=>{
+
+let color = r.status=="resting" ? "resting" : "checkout"
+
+let card = `
+<div class="rest-card ${color}">
+<div class="rest-room">房號 ${r.room}</div>
+姓名:${r.name}<br>
+電話:${r.phone}<br>
+身分證:${r.id}<br>
+生日:${r.birth}<br>
+休息:${r.time}<br>
+金額:${r.price}<br>
+備註:${r.note}<br>
+<button onclick="checkoutRest(${i})">結束休息</button>
+</div>
+`
+
+area.innerHTML += card
+
+})
+
+}
+
+function checkoutRest(index){
+
+let date = getCurrentDate()
+
+restData[date][index].status="checkout"
+
+renderRest()
+
+}
+selectedDate.value = new Date().toISOString().split("T")[0]
+updateUI()
+renderRest()
+</script>
 </body>
 </html>
