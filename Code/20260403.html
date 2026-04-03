@@ -1,10 +1,13 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>房況管理系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/airbnb.css">
 
 <style>
     * { box-sizing: border-box; font-family: 'Noto Sans TC', sans-serif; }
@@ -12,32 +15,20 @@
     body {
         margin: 0;
         background: linear-gradient(135deg,#667eea,#764ba2);
-        padding: 15px; /* 手機版間距縮小 */
+        padding: 15px; 
     }
 
-    /* 修改這部分，增加上方空間 */
     .container {
         background: white;
         border-radius: 20px;
-        padding: 60px 20px 20px 20px; /* 增加上方 padding 到 60px */
+        padding: 60px 20px 80px 20px;
         box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         max-width: 1000px;
         margin: 0 auto;
-        position: relative; /* 確保按鈕能準確定位在右上角 */
+        position: relative; 
+        overflow: hidden; 
     }
 
-    /* 確保按鈕在手機版不會太突兀 */
-    @media (max-width: 600px) {
-        .action-buttons {
-            top: 10px;
-            right: 10px;
-        }
-        .container {
-            padding-top: 70px;
-        }
-    }
-
-    /* ⭐ 新增的按鈕組樣式 */
     .action-buttons {
         position: absolute;
         top: 20px;
@@ -46,12 +37,72 @@
         gap: 10px;
     }
 
-    /* 房況網格：手機 1 欄, 平板 2 欄, 電腦 3 欄 */
+    /* ⭐ 新增：高質感日期與統計控制列 */
+    .date-control-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-top: 10px;
+        margin-bottom: 20px;
+        gap: 15px;
+    }
+
+    .date-picker-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .date-picker-wrapper {
+        display: flex;
+        align-items: center;
+        background: #eef2ff;
+        padding: 8px 16px;
+        border-radius: 30px;
+        border: 2px solid #c7d2fe;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .date-picker-wrapper:hover {
+        background: #e0e7ff;
+        border-color: #818cf8;
+        transform: translateY(-2px);
+    }
+
+    .date-icon {
+        margin-right: 8px;
+        font-size: 1.2rem;
+    }
+
+    .custom-date-input {
+        border: none;
+        background: transparent;
+        font-size: 16px;
+        font-weight: 700;
+        color: #4f46e5;
+        outline: none;
+        cursor: pointer;
+        width: 110px;
+        text-align: center;
+    }
+
+    #statsBox {
+        text-align: right;
+        font-size: 13px;
+        background: #f8fafc;
+        padding: 12px 18px;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+
     .room-grid {
         display: grid;
         grid-template-columns: 1fr; 
         gap: 15px;
-        margin-top: 20px;
+        margin-top: 10px;
+        transition: transform 0.3s ease-out, opacity 0.3s ease-out;
     }
 
     @media (min-width: 600px) {
@@ -77,11 +128,11 @@
 
     .room-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
-    /* 狀態顏色 */
     .booked { background: #f6c453 !important; color: #333 !important; }
     .checkedin { background: #43e97b !important; color: white !important; }
     .checkedout { background: #555 !important; color: white !important; }
     .stay-continue { background: #4dabf7 !important; color: white !important; }
+    .resting { background: #a29bfe !important; color: white !important; }
 
     .room-header {
         display: flex;
@@ -92,202 +143,111 @@
     }
 
     .room-number { font-size: 14px; font-weight: bold; }
+    .guest-name-row { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+    .booking-detail { font-size: 13px; line-height: 1.6; }
 
-    .guest-name-row {
-        font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 5px;
+    .header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 0;
     }
 
-    .booking-detail {
-        font-size: 13px;
-        line-height: 1.6;
+    .logo {
+        width: 120px; 
+        height: 120px;
+        object-fit: cover;
+        border-radius: 50%; 
+        margin-bottom: 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
 
-    /* 彈窗(Modal) 手機適配 */
-    .modal {
-        display: none;
+    .hotel-name {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 600;
+        text-shadow: 1px 1px 4px rgba(0,0,0,0.3);
+    }
+
+    .date-nav-btn {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: white;
-        padding: 20px;
-        z-index: 1000;
-        overflow-y: auto;
-        transform: none;
+        bottom: 20px;
+        background: rgba(99, 102, 241, 0.9);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 30px;
+        font-weight: bold;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        cursor: pointer;
+        z-index: 50;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
     }
 
-    @media (min-width: 600px) {
-        .modal {
-            top: 5%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 450px;
-            height: auto;
-            border-radius: 20px;
+    .date-nav-btn:hover { background: rgba(79, 70, 229, 1); transform: scale(1.05); }
+    .prev-day-btn { left: 20px; }
+    .next-day-btn { right: 20px; }
+
+    @media (max-width: 600px) {
+        body { padding: 10px; }
+        .container { padding: 80px 15px 70px 15px; }
+        .action-buttons { width: calc(100% - 20px); justify-content: space-between; top: 15px; right: 10px; }
+        .btn { padding: 8px 12px; font-size: 14px; flex: 1; text-align: center; }
+        .room-card { min-height: 120px; padding: 12px; }
+        .guest-name-row { font-size: 16px; }
+        .date-nav-btn { padding: 10px 15px; font-size: 13px; bottom: 15px; }
+        .prev-day-btn { left: 10px; }
+        .next-day-btn { right: 10px; }
+        
+        /* 手機版控制列適配 */
+        .date-control-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+        .date-picker-container {
+            justify-content: space-between;
+        }
+        #statsBox {
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
     }
 
-    /* 休息區手機適配 */
-    .rest-section {
-        margin: 30px auto;
-        width: 100%;
-        max-width: 700px;
-    }
-
-    .rest-input {
-        grid-template-columns: 1fr; /* 手機上一欄 */
-    }
-
-    @media (min-width: 500px) {
-        .rest-input { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    .header { flex-direction: column; text-align: center; }
-
-    /* 彈窗背景遮罩 */
     .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(4px);
-        z-index: 999;
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 999;
     }
 
-    /* 彈窗主體 */
     .modal {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 550px;
-        background: #ffffff;
-        border-radius: 16px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        z-index: 1000;
-        max-height: 85vh;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
+        display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 90%; max-width: 550px; background: #ffffff; border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); z-index: 1000;
+        max-height: 85vh; overflow: hidden; flex-direction: column;
     }
 
-    /* 標題區 */
-    .modal-header {
-        padding: 20px 24px;
-        background: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .modal-header h3 {
-        margin: 0;
-        color: #1e293b;
-        font-size: 1.25rem;
-    }
-
-    /* 內容捲動區 */
-    .modal-body {
-        padding: 24px;
-        overflow-y: auto;
-        flex-grow: 1;
-    }
-
-    /* 表單分組 */
-    .form-section {
-        margin-bottom: 24px;
-    }
-
-    .form-section-title {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #6366f1;
-        margin-bottom: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border-bottom: 1px solid #eef2ff;
-        padding-bottom: 4px;
-    }
-
-    /* 輸入框樣式 */
-    .form-group {
-        margin-bottom: 16px;
-    }
-
-    .form-group label {
-        display: block;
-        font-size: 0.875rem;
-        color: #475569;
-        margin-bottom: 6px;
-        font-weight: 500;
-    }
-
-    .modal input, .modal select, .modal textarea {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #cbd5e1;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: all 0.2s;
-        background: #fff;
-    }
-
-    .modal input:focus, .modal select:focus, .modal textarea:focus {
-        outline: none;
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-
-    .modal input[readonly] {
-        background: #f1f5f9;
-        color: #64748b;
-    }
-
-    /* 雙欄排版 */
-    .grid-2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-    }
-
-    /* 按鈕區 */
-    .modal-footer {
-        padding: 16px 24px;
-        background: #f8fafc;
-        border-top: 1px solid #e2e8f0;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: flex-end;
-    }
-
-    .btn {
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: none;
-    }
-
+    .modal-header { padding: 20px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { margin: 0; color: #1e293b; font-size: 1.25rem; }
+    .modal-body { padding: 24px; overflow-y: auto; flex-grow: 1; }
+    .form-section { margin-bottom: 24px; }
+    .form-section-title { font-size: 0.875rem; font-weight: 600; color: #6366f1; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #eef2ff; padding-bottom: 4px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.875rem; color: #475569; margin-bottom: 6px; font-weight: 500; }
+    .modal input, .modal select, .modal textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; transition: all 0.2s; background: #fff; }
+    .modal input:focus, .modal select:focus, .modal textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+    .modal input[readonly] { background: #f1f5f9; color: #64748b; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-footer { padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
     .btn-primary { background: #6366f1; color: white; }
     .btn-primary:hover { background: #4f46e5; }
-
     .btn-success { background: #22c55e; color: white; }
     .btn-success:hover { background: #16a34a; }
-
     .btn-outline { background: white; border: 1px solid #cbd5e1; color: #475569; }
     .btn-outline:hover { background: #f1f5f9; }
-
     .btn-danger { background: #ef4444; color: white; }
     .btn-danger:hover { background: #dc2626; }
 
@@ -295,38 +255,42 @@
         .modal { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
         .grid-2 { grid-template-columns: 1fr; }
     }
+
+    #restCardsArea { display: none; }
+    .no-scroll { overflow: hidden !important; height: 100vh !important; }
 </style>
 </head>
 <body>
     <div class="header">
-        <img src="logo.jpg" class="logo">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRCImo3zo7iCeo1quGZKt4c0GTrh_uSg3mSfQ&s" class="logo">
         <div class="hotel-name">來點子站前旅店</div>
     </div>
 
-    <div class="container">
-    <div class="action-buttons">
-        <button class="btn btn-primary" onclick="showBookingForm()">📝 住房登記</button>
-        <button class="btn btn-outline" onclick="showRestForm()">🕒 休息登記</button>
-    </div>
+    <button class="date-nav-btn prev-day-btn" onclick="changeDate(-1)">❮ 前一日</button>
+    <button class="date-nav-btn next-day-btn" onclick="changeDate(1)">後一日 ❯</button>
 
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2>🏨 住房資料</h2>
-        <div id="statsBox" style="text-align:right; font-size:14px;"></div>
-    </div>
-    選擇日期：
-    <input type="date" id="selectedDate">
+    <div class="container" id="mainContainer">
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="showBookingForm()">📝 住房登記</button>
+            <button class="btn btn-outline" onclick="showRestForm()">🕒 休息登記</button>
+        </div>
 
-    <div class="room-grid" id="roomGrid"></div>
-    </div>
+        <div class="date-control-bar">
+            <div class="date-picker-container">
+                <h2 style="margin:0; font-size:1.4rem;">🏨 房況總覽</h2>
+                <div class="date-picker-wrapper" onclick="document.getElementById('selectedDate')._flatpickr.open()">
+                    <span class="date-icon">📅</span>
+                    <input type="text" id="selectedDate" class="custom-date-input" readonly placeholder="選擇日期">
+                </div>
+            </div>
+            <div id="statsBox"></div>
+        </div>
 
-    <div id="restCardsArea">
-
-    <div id="restCards"></div>
-
+        <div class="room-grid" id="roomGrid"></div>
     </div>
 
     <div class="modal-overlay" id="modalOverlayRest" onclick="closeModalRest()"></div>
-    <div class="modal" id="restFormModal" style="display: none;">
+    <div class="modal" id="restFormModal">
         <div class="modal-header">
             <h3>🕒 休息客登記</h3>
             <button onclick="closeModalRest()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</button>
@@ -337,56 +301,23 @@
                     <label>選擇房號</label>
                     <select id="restRoom">
                     <option value="">選擇房號</option>
-                    <option>201</option>
-                    <option>202</option>
-                    <option>203</option>
-                    <option>301</option>
-                    <option>302</option>
-                    <option>303</option>
-                    <option>401</option>
-                    <option>402</option>
-                    <option>403</option>
                     </select>
                 </div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>顧客姓名</label>
-                        <input id="restName" placeholder="顧客姓名">
-                    </div>
-                    <div class="form-group">
-                        <label>電話</label>
-                        <input id="restPhone" placeholder="電話">
-                    </div>
+                    <div class="form-group"><label>顧客姓名</label><input id="restName" placeholder="顧客姓名"></div>
+                    <div class="form-group"><label>電話</label><input id="restPhone" placeholder="電話"></div>
                 </div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>人數</label>
-                        <input id="restPeople" type="number" placeholder="人數" value="0" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>休息時間</label>
-                        <input id="restTime" placeholder="休息時間 (例:00:00~00:00)">
-                    </div>
+                    <div class="form-group"><label>人數</label><input id="restPeople" type="number" placeholder="人數" value="1" min="1"></div>
+                    <div class="form-group"><label>休息時間</label><input id="restTime" placeholder="休息時間 (例:00:00~00:00)"></div>
                 </div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>金額</label>
-                        <input id="restPrice" type="number" placeholder="金額">
-                    </div>
-                    <div class="form-group">
-                        <label>身分證</label>
-                        <input id="restID" placeholder="身分證">
-                    </div>
+                    <div class="form-group"><label>金額</label><input id="restPrice" type="number" placeholder="金額"></div>
+                    <div class="form-group"><label>身分證</label><input id="restID" placeholder="身分證"></div>
                 </div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>出生年月日</label>
-                        <input id="restBirth" placeholder="出生年月日">
-                    </div>
-                    <div class="form-group">
-                        <label>備註</label>
-                        <input id="restNote" placeholder="備註">
-                    </div>
+                    <div class="form-group"><label>出生年月日</label><input id="restBirth" type="date"></div>
+                    <div class="form-group"><label>備註</label><input id="restNote" placeholder="備註"></div>
                 </div>
             </div>
         </div>
@@ -397,8 +328,7 @@
     </div>
 
     <div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
-
-    <div class="modal" id="formModal" style="display: none;">
+    <div class="modal" id="formModal">
         <div class="modal-header">
             <h3 id="modalTitle">房號資訊</h3>
             <button onclick="closeModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</button>
@@ -408,72 +338,36 @@
             <div class="form-section">
                 <div class="form-section-title">基本資訊</div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>接單日期</label>
-                        <input id="orderDate" type="date">
-                    </div>
-                    <div class="form-group">
-                        <label>訂單編號</label>
-                        <input id="orderNumber" placeholder="請輸入編號">
-                    </div>
+                    <div class="form-group"><label>接單日期</label><input id="orderDate" type="date"></div>
+                    <div class="form-group"><label>訂單編號</label><input id="orderNumber" placeholder="請輸入編號"></div>
                 </div>
-                <div class="form-group">
-                    <label>退房日期</label>
-                    <input id="checkoutDate" type="date">
-                </div>
+                <div class="form-group"><label>退房日期</label><input id="checkoutDate" type="date"></div>
             </div>
 
             <div class="form-section">
                 <div class="form-section-title">住客詳情</div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>客人姓名</label>
-                        <input id="name">
-                    </div>
-                    <div class="form-group">
-                        <label>電話</label>
-                        <input id="phone">
-                    </div>
+                    <div class="form-group"><label>客人姓名</label><input id="name"></div>
+                    <div class="form-group"><label>電話</label><input id="phone"></div>
                 </div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>身分證</label>
-                        <input id="idNumber">
-                    </div>
-                    <div class="form-group">
-                        <label>出生年月日</label>
-                        <input type="date" id="birthday">
-                    </div>
+                    <div class="form-group"><label>身分證</label><input id="idNumber"></div>
+                    <div class="form-group"><label>出生年月日</label><input type="date" id="birthday"></div>
                 </div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>人數</label>
-                        <input id="people" type="number">
-                    </div>
-                    <div class="form-group">
-                        <label>國家</label>
-                        <input id="country" placeholder="預設台灣">
-                    </div>
+                    <div class="form-group"><label>人數</label><input id="people" type="number"></div>
+                    <div class="form-group"><label>國家</label><input id="country" placeholder="預設台灣"></div>
                 </div>
             </div>
 
             <div class="form-section">
                 <div class="form-section-title">帳務資訊</div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>總金額</label>
-                        <input id="total" type="number">
-                    </div>
-                    <div class="form-group">
-                        <label>訂金</label>
-                        <input id="deposit" type="number">
-                    </div>
+                    <div class="form-group"><label>總金額</label><input id="total" type="number"></div>
+                    <div class="form-group"><label>訂金</label><input id="deposit" type="number"></div>
                 </div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>餘額</label>
-                        <input id="balance" type="number" readonly>
-                    </div>
+                    <div class="form-group"><label>餘額</label><input id="balance" type="number" readonly></div>
                     <div class="form-group">
                         <label>付款狀態</label>
                         <select id="payStatus">
@@ -483,10 +377,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>來源平台</label>
-                    <input id="platform" placeholder="如：Booking, Agoda">
-                </div>
+                <div class="form-group"><label>來源平台</label><input id="platform" placeholder="如：Booking, Agoda"></div>
             </div>
 
             <div class="form-section">
@@ -504,6 +395,9 @@
         </div>
     </div>
 
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh-tw.js"></script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -519,13 +413,23 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
 function getCurrentDate(){
     return document.getElementById("selectedDate").value
 }
+
+function getDateString(dateObj) {
+    let y = dateObj.getFullYear();
+    let m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    let d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 const rooms = ["201","202","203","301","302","303","401","402","403"];
 let bookings = {};
 let currentRoom = "";
 let restData = {}
+
 window.onload = async () => {
     const grid = document.getElementById("roomGrid");
 
@@ -541,122 +445,154 @@ window.onload = async () => {
         grid.appendChild(card);
     });
 
-    // 設定日期
-    const selectedDate = document.getElementById("selectedDate");
-    selectedDate.value = new Date().toISOString().split("T")[0];
+    // ⭐ 初始化 Flatpickr 客製化日期選擇器
+    flatpickr("#selectedDate", {
+        locale: "zh_tw",
+        dateFormat: "Y-m-d",
+        defaultDate: "today",
+        disableMobile: true, // 強制手機端也使用這個漂亮的日曆，不叫出原生滾輪
+        onChange: async function(selectedDates, dateStr, instance) {
+            // 當日期改變時，自動重新讀取並更新 UI
+            await Promise.all([loadData(), loadRestData()]);
+            updateUI();
+        }
+    });
 
-    // 綁定 deposit 與 total 的監聽器
     const deposit = document.getElementById("deposit");
     const total = document.getElementById("total");
     deposit.addEventListener("input", calcBalance);
     total.addEventListener("input", calcBalance);
 
-    // 讀 Firebase 資料
-    await loadData();
-    await loadRestData();
+    await Promise.all([loadData(), loadRestData()]);
+    updateUI();
 };
-function calcBalance(){
-    balance.value = (Number(total.value)||0)-(Number(deposit.value)||0);
+
+function calcBalance() {
+    const totalEl = document.getElementById("total");
+    const depositEl = document.getElementById("deposit");
+    const balanceEl = document.getElementById("balance");
+    if (totalEl && depositEl && balanceEl) {
+        balanceEl.value = (Number(totalEl.value) || 0) - (Number(depositEl.value) || 0);
+    }
 }
 
-window.showBookingForm = function() {
-    // 確保這裡傳入一個識別值，而不是在頁面載入時自動執行
-    openModal("NEW"); 
+// ⭐ 更新 changeDate 函式以相容 Flatpickr
+window.changeDate = function(days) {
+    const dateInput = document.getElementById("selectedDate");
+    if(!dateInput.value) return;
+    
+    let [y, m, d] = dateInput.value.split("-");
+    let currentDate = new Date(y, m - 1, d);
+    currentDate.setDate(currentDate.getDate() + days);
+    
+    const newDateStr = getDateString(currentDate);
+    
+    // 透過 flatpickr 的 API 設定新日期 (true 參數代表會觸發 onChange 事件)
+    dateInput._flatpickr.setDate(newDateStr, true);
+    
+    const grid = document.getElementById("roomGrid");
+    grid.style.opacity = '0';
+    grid.style.transform = days > 0 ? 'translateX(20px)' : 'translateX(-20px)';
+    
+    setTimeout(() => {
+        grid.style.opacity = '1';
+        grid.style.transform = 'translateX(0)';
+    }, 150);
+};
+
+let touchstartX = 0;
+let touchendX = 0;
+let touchstartY = 0;
+let touchendY = 0;
+const container = document.getElementById('mainContainer');
+
+container.addEventListener('touchstart', e => {
+    touchstartX = e.changedTouches[0].screenX;
+    touchstartY = e.changedTouches[0].screenY;
+}, {passive: true});
+
+container.addEventListener('touchend', e => {
+    touchendX = e.changedTouches[0].screenX;
+    touchendY = e.changedTouches[0].screenY;
+    handleSwipe();
+}, {passive: true});
+
+function handleSwipe() {
+    const thresholdX = 50; 
+    const thresholdY = 80;
+    let diffX = touchendX - touchstartX;
+    let diffY = Math.abs(touchendY - touchstartY);
+
+    if (diffY < thresholdY) {
+        if (diffX < -thresholdX) window.changeDate(1); 
+        else if (diffX > thresholdX) window.changeDate(-1); 
+    }
 }
+
+window.showBookingForm = function() { openModal("NEW"); }
 
 function openModal(room) {
-    if (!room) return; 
+    const selectedDate = document.getElementById("selectedDate");
     if (!selectedDate.value) { alert("請先選日期"); return; }
     
-    currentRoom = room;
-    modalTitle.innerText = "房號 " + room + " 詳情";
+    currentRoom = (room === "NEW" || !room) ? "" : room;
+    document.getElementById("modalTitle").innerText = currentRoom ? "房號 " + currentRoom + " 詳情" : "📝 新增住房登記";
     
     document.getElementById("modalOverlay").style.display = "block";
     document.getElementById("formModal").style.display = "flex";
+    document.body.classList.add("no-scroll");
 
-    const data = bookings[selectedDate.value]?.[room];
-    
+    const data = bookings[selectedDate.value]?.[currentRoom];
+    const fields = ['orderNumber', 'name', 'phone', 'people', 'idNumber', 'birthday', 'orderDate', 'checkoutDate', 'total', 'deposit', 'balance', 'country', 'platform', 'request', 'payStatus'];
+
     if (data) {
-        // 確保這些變數是指向 DOM 物件，建議改用 document.getElementById 獲取
-        document.getElementById("orderNumber").value = data.orderNumber || "";
-        document.getElementById("name").value = data.name || "";
-        document.getElementById("phone").value = data.phone || "";
-        document.getElementById("people").value = data.people || "";
-        document.getElementById("idNumber").value = data.idNumber || "";
-        document.getElementById("birthday").value = data.birthday || "";
-        document.getElementById("orderDate").value = data.orderDate || "";
-        document.getElementById("total").value = data.total || "";
-        document.getElementById("deposit").value = data.deposit || "";
-        document.getElementById("balance").value = data.balance || "";
-        document.getElementById("country").value = data.country || "";
-        document.getElementById("platform").value = data.platform || "";
-        document.getElementById("request").value = data.request || "";
-        document.getElementById("payStatus").value = data.payStatus || "";
+        fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = data[id] || ""; });
     } else {
-        // ✅ 修正後的清空邏輯：避免使用可能衝突的簡寫變數 i
-        const inputIds = [
-            'orderNumber', 'name', 'phone', 'people', 'idNumber', 
-            'birthday', 'orderDate', 'total', 'deposit', 'balance', 
-            'country', 'platform', 'request'
-        ];
-        
-        inputIds.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.value = ""; 
-            }
-        });
-        
-        const payStatusEl = document.getElementById("payStatus");
-        if (payStatusEl) payStatusEl.value = "";
+        fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
     }
 }
 
-window.closeModal = function(){
+window.closeModal = function() {
     document.getElementById("modalOverlay").style.display = "none";
     document.getElementById("formModal").style.display = "none";
+    document.body.classList.remove("no-scroll");
 }
 
-// ⭐ 新增：顯示休息登記表單
 window.showRestForm = function() {
+    const selectedDate = document.getElementById("selectedDate");
+    if (!selectedDate.value) { alert("請先選擇日期"); return; }
+    updateRestRoomOptions();
     document.getElementById("modalOverlayRest").style.display = "block";
     document.getElementById("restFormModal").style.display = "flex";
+    document.body.classList.add("no-scroll");
 }
 
-// ⭐ 新增：關閉休息登記表單
 window.closeModalRest = function() {
     document.getElementById("modalOverlayRest").style.display = "none";
     document.getElementById("restFormModal").style.display = "none";
+    document.body.classList.remove("no-scroll");
 }
 
 window.save = async function(){
-
     const checkin = document.getElementById("selectedDate").value;
     const checkout = document.getElementById("checkoutDate").value;
+    if(!checkin || !checkout){ alert("請選擇入住與退房日期"); return; }
 
-    if(!checkin || !checkout){
-        alert("請選擇入住與退房日期");
-        return;
-    }
-
-    let current = new Date(checkin);
-    const end = new Date(checkout);
-
+    let [cy, cm, cd] = checkin.split("-");
+    let current = new Date(cy, cm-1, cd);
+    let [ey, em, ed] = checkout.split("-");
+    const end = new Date(ey, em-1, ed);
     let dayIndex = 0;
 
     while(current < end){
+        const dateStr = getDateString(current);
+        if(!bookings[dateStr]) bookings[dateStr] = {};
 
-        const date = current.toISOString().split("T")[0];
-
-        if(!bookings[date]) bookings[date] = {};
-
-        const oldData = bookings[date]?.[currentRoom] || {};
-
+        const oldData = bookings[dateStr]?.[currentRoom] || {};
         let status = dayIndex === 0 ? "booked" : "stay";
 
-        bookings[date][currentRoom] = {
+        bookings[dateStr][currentRoom] = {
             ...oldData,
-
             orderNumber: document.getElementById("orderNumber").value.trim(),
             name: document.getElementById("name").value.trim(),
             phone: document.getElementById("phone").value,
@@ -670,148 +606,144 @@ window.save = async function(){
             platform: document.getElementById("platform").value,
             request: document.getElementById("request").value,
             payStatus: document.getElementById("payStatus").value,
-
             status: oldData.status || status,
             everCheckedIn: oldData.everCheckedIn || false,
-
             checkinDate: checkin,
             checkoutDate: checkout
         };
-
-        await setDoc(doc(db, "bookings", date), bookings[date]);
-
+        await setDoc(doc(db, "bookings", dateStr), bookings[dateStr]);
         current.setDate(current.getDate() + 1);
         dayIndex++;
     }
-
     updateUI();
     closeModal();
 }
-window.setStatus = async function(status){
 
+window.setStatus = async function(status){
     const date = document.getElementById("selectedDate").value;
     const data = bookings[date]?.[currentRoom];
-
     if(!data) return;
 
-    const checkin = new Date(data.checkinDate);
-    const checkout = new Date(data.checkoutDate);
-
-    let current = new Date(checkin);
+    let [cy, cm, cd] = data.checkinDate.split("-");
+    let current = new Date(cy, cm-1, cd);
+    let [ey, em, ed] = data.checkoutDate.split("-");
+    const checkout = new Date(ey, em-1, ed);
 
     while(current < checkout){
-
-        const d = current.toISOString().split("T")[0];
-
-        if(bookings[d]?.[currentRoom]){
-
-            bookings[d][currentRoom].status = status;
-
+        const dStr = getDateString(current);
+        if(bookings[dStr]?.[currentRoom]){
+            bookings[dStr][currentRoom].status = status;
             if(status === "checkedin" || status === "checkedout"){
-                bookings[d][currentRoom].everCheckedIn = true;
+                bookings[dStr][currentRoom].everCheckedIn = true;
             }
-
-            await setDoc(doc(db, "bookings", d), bookings[d]);
+            await setDoc(doc(db, "bookings", dStr), bookings[dStr]);
         }
-
         current.setDate(current.getDate() + 1);
     }
-
     updateUI();
     closeModal();
 }
 
 window.deleteBooking = async function(){
-
     const date = document.getElementById("selectedDate").value;
     const data = bookings[date]?.[currentRoom];
-
     if(!data) return;
 
-    if(confirm("確定要取消此訂單嗎？")){
-
-        let current = new Date(data.checkinDate);
-        const end = new Date(data.checkoutDate);
+    if(confirm("確定要取消此訂單嗎？\n(若為多日連續訂房，該期間的所有連帶訂單將一併被刪除)")){
+        let [cy, cm, cd] = data.checkinDate.split("-");
+        let current = new Date(cy, cm-1, cd);
+        let [ey, em, ed] = data.checkoutDate.split("-");
+        const end = new Date(ey, em-1, ed);
 
         while(current < end){
-
-            const d = current.toISOString().split("T")[0];
-
-            if(bookings[d]){
-                delete bookings[d][currentRoom];
-                await setDoc(doc(db, "bookings", d), bookings[d]);
+            const dStr = getDateString(current);
+            if(bookings[dStr]){
+                delete bookings[dStr][currentRoom];
+                await setDoc(doc(db, "bookings", dStr), bookings[dStr]);
             }
-
             current.setDate(current.getDate() + 1);
         }
-
         updateUI();
         closeModal();
     }
 }
 
-    function updateUI(){
-        const date = selectedDate.value;
+async function toggleRestStatus(index, newStatus) {
+    const dateInput = document.getElementById("selectedDate");
+    let date = dateInput.value;
+    restData[date][index].status = newStatus;
+    await setDoc(doc(db, "restData", date), { data: restData[date] });
+    updateUI();
+}
 
-        document.querySelectorAll(".room-card").forEach((card, i) => {
-            const room = rooms[i];
-            const data = bookings[date]?.[room];
+function updateUI() {
+    const selectedDate = document.getElementById("selectedDate");
+    const date = selectedDate.value;
+    const roomCards = document.querySelectorAll(".room-card");
+    const currentRestData = restData[date] || [];
+
+    roomCards.forEach((card, i) => {
+        const room = rooms[i];
+        const bookingData = bookings[date]?.[room];
+        const restInfo = currentRestData.find(r => r.room === room);
+        
+        card.className = "room-card";
+        card.innerHTML = "";
+
+        if (bookingData) {
+            let [cy, cm, cd] = bookingData.checkinDate.split("-");
+            let checkin = new Date(cy, cm-1, cd);
+            let [ey, em, ed] = bookingData.checkoutDate.split("-");
+            let checkout = new Date(ey, em-1, ed);
+            const totalNights = Math.round((checkout - checkin) / (1000*60*60*24));
             
-            // 重置樣式
-            card.className = "room-card";
-            card.innerHTML = "";
+            let payText = bookingData.payStatus === "paid" ? "✅ 已付清" : 
+                        (bookingData.payStatus === "platform" ? "🏦 平台已收" : `❌ 未收: $${bookingData.balance}`);
 
-            if(data){
-                // 計算天數
-                const checkin = new Date(data.checkinDate);
-                const checkout = new Date(data.checkoutDate);
-                const totalNights = Math.round((checkout - checkin) / (1000*60*60*24));
-                
-                // 收款狀態判斷
-                let payText = "";
-                if(data.payStatus === "paid") payText = "✅ 已付清";
-                else if(data.payStatus === "platform") payText = "🏦 平台已收";
-                else payText = (Number(data.balance) <= 0) ? "✅ 已收訖" : `❌ 未收: $${data.balance}`;
-
-                // 套用顏色狀態
-                card.classList.add(data.status || "booked");
-                if(data.status === "stay") card.classList.add("stay-continue");
-
-                card.innerHTML = `
-                    <div class="room-header">
-                        <span class="room-number">房號 ${room}</span>
-                        <span style="font-size:12px;">${data.status === 'checkedin' ? '🟢入住中' : '🟡預訂'}</span>
-                    </div>
-                    <div class="guest-name-row">
-                        ${data.name || '未填'} | <span style="font-size:14px;">${data.orderNumber || '無編號'} (${data.platform || '現場'})</span>
-                    </div>
-                    <div class="booking-detail">
-                        入住：${data.checkinDate}<br>
-                        退房：${data.checkoutDate}<br>
-                        共 ${totalNights} 晚 ｜ ${payText}
-                    </div>
-                `;
-            } else {
-                card.innerHTML = `
-                    <div class="room-header"><span class="room-number">房號 ${room}</span></div>
-                    <div class="guest-name" style="text-align:center; color:#ccc; margin-top:10px;">( 空房 )</div>
-                `;
-            }
-        });
-        updateStats();
-    }
-
-document.getElementById("selectedDate").addEventListener("change", async () => {
-    await loadData();      // 讀住房資料
-    await loadRestData();  // 讀休息資料
-});
+            card.classList.add(bookingData.status || "booked");
+            card.innerHTML = `
+                <div class="room-header">
+                    <span class="room-number">房號 ${room}</span>
+                    <span style="font-size:12px;">🏨 ${bookingData.status === 'checkedin' ? '入住中' : '預訂'}</span>
+                </div>
+                <div class="guest-name-row">${bookingData.name || '未填'}</div>
+                <div class="booking-detail">共 ${totalNights} 晚 ｜ ${payText}</div>
+            `;
+            card.onclick = () => openModal(room);
+        } else if (restInfo) {
+            card.classList.add(restInfo.status === "resting" ? "resting" : "checkedout");
+            const statusText = restInfo.status === "resting" ? "🕒 休息中" : "🏁 休息結束";
+            
+            card.innerHTML = `
+                <div class="room-header">
+                    <span class="room-number">房號 ${room}</span>
+                    <span style="font-size:12px;">${statusText}</span>
+                </div>
+                <div class="guest-name-row">${restInfo.name}</div>
+                <div class="booking-detail">時間：${restInfo.time}<br>金額：$${restInfo.price}</div>
+            `;
+            card.onclick = () => {
+                const idx = currentRestData.findIndex(r => r.room === room);
+                if (restInfo.status === "resting") {
+                    if (confirm(`房號 ${room}：${restInfo.name}\n確定要「結束休息」嗎？`)) toggleRestStatus(idx, "checkout");
+                } else {
+                    if (confirm(`此房已結束休息。\n是否要「恢復休息狀態」(誤觸恢復)？`)) toggleRestStatus(idx, "resting");
+                }
+            };
+        } else {
+            card.innerHTML = `
+                <div class="room-header"><span class="room-number">房號 ${room}</span></div>
+                <div class="guest-name" style="text-align:center; color:#ccc; margin-top:10px;">( 空房 )</div>
+            `;
+            card.onclick = () => openModal(room);
+        }
+    });
+    updateStats();
+}
 
 window.addRest = async function(){
     let date = getCurrentDate()
-    if(!date){
-        alert("請先選擇日期")
-        return;
-    }
+    if(!date){ alert("請先選擇日期"); return; }
     
     let room = document.getElementById("restRoom").value
     let name = document.getElementById("restName").value
@@ -820,181 +752,102 @@ window.addRest = async function(){
     let price = Number(document.getElementById("restPrice").value) || 0;
     let restPeople = Number(document.getElementById("restPeople").value) || 1;
 
-    if(name=="" || room==""){
-        alert("請填寫房號與姓名")
-        return;
-    }
-
-    
+    if(name=="" || room==""){ alert("請填寫房號與姓名"); return; }
 
     let rest = {
-        room:room,
-        name:name,
-        phone:phone,
-        people: restPeople,
-        time:time,
-        price:price,
-        id:document.getElementById("restID").value,
-        birth:document.getElementById("restBirth").value,
-        note:document.getElementById("restNote").value,
-        status:"resting"
+        room:room, name:name, phone:phone, people: restPeople,
+        time:time, price:price, id:document.getElementById("restID").value,
+        birth:document.getElementById("restBirth").value, note:document.getElementById("restNote").value, status:"resting"
     }
 
-    if(!restData[date]){
-        restData[date]=[];
-    }
+    if(!restData[date]){ restData[date]=[]; }
 
     restData[date].push(rest);
-    // ⭐ 存到 Firebase
-     try {
+    try {
         await setDoc(doc(db, "restData", date), { data: restData[date] });
-    } catch(e) {
-        console.error("存休息房資料失敗", e);
-        alert("Firebase 存檔失敗，請檢查控制台");
-    }
-    renderRest();
-    closeModalRest(); // 新增完畢後關閉彈窗
+    } catch(e) { console.error("存休息房資料失敗", e); alert("Firebase 存檔失敗，請檢查控制台"); }
+    updateUI(); 
+    closeModalRest();
 
-    // 清空輸入欄位
     document.getElementById("restRoom").value=""
     document.getElementById("restName").value=""
     document.getElementById("restPhone").value=""
-    document.getElementById("restPeople").value = 0;
+    document.getElementById("restPeople").value = 1;
     document.getElementById("restTime").value=""
     document.getElementById("restPrice").value=""
     document.getElementById("restID").value=""
     document.getElementById("restBirth").value=""
     document.getElementById("restNote").value=""
 }
-function renderRest(){
-    let date = getCurrentDate();
-    let area = document.getElementById("restCards");
-    area.innerHTML = "";
-
-    if(!restData[date]) return;
-
-    restData[date].forEach((r, i) => {
-        let color = r.status=="resting" ? "resting" : "checkout";
-
-        let cardDiv = document.createElement("div");
-        cardDiv.className = `rest-card ${color}`;
-
-        cardDiv.innerHTML = `
-            <div class="rest-room">房號 ${r.room}</div>
-            姓名: ${r.name}<br>
-            電話: ${r.phone}<br>
-            人數: ${r.people}<br>
-            身分證: ${r.id}<br>
-            生日: ${r.birth}<br>
-            休息: ${r.time}<br>
-            金額: ${r.price}<br>
-            備註: ${r.note}<br>
-        `;
-
-        let checkoutBtn = document.createElement("button");
-        checkoutBtn.textContent = "結束休息";
-        checkoutBtn.addEventListener("click", () => checkoutRest(i));
-
-        let deleteBtn = document.createElement("button");
-        deleteBtn.textContent = "刪除資料";
-        deleteBtn.addEventListener("click", () => deleteRest(i));
-
-        cardDiv.appendChild(checkoutBtn);
-        cardDiv.appendChild(deleteBtn);
-
-        area.appendChild(cardDiv);
-    });
-}
-
-async function checkoutRest(index){
-
-    let date = getCurrentDate()
-
-    restData[date][index].status="checkout"
-    // 更新 Firebase
-        await setDoc(doc(db, "restData", date), { data: restData[date] || [] });
-        renderRest()
-}
-async function deleteRest(index){
-
-    let date = getCurrentDate()
-
-    if(confirm("確定要刪除這筆休息資料嗎？")){
-
-        restData[date].splice(index,1)
-        // 更新 Firebase
-        await setDoc(doc(db, "restData", date), { data: restData[date] || [] });
-        renderRest()
-
-    }
-}
 
 async function loadData() {
-  const date = document.getElementById("selectedDate").value; // ✅ 提到外面
-
-  try {
-    const docRef = doc(db, "bookings", date);
-    const docSnap = await getDoc(docRef);
-    bookings[date] = docSnap.exists() ? docSnap.data() : {};
-  } catch(e) {
-    console.error("載入入住資料失敗", e);
-    bookings[date] = {}; // ✅ 不會爆了
-  }
-
-  updateUI();
+    const date = document.getElementById("selectedDate").value; 
+    try {
+        const docRef = doc(db, "bookings", date);
+        const docSnap = await getDoc(docRef);
+        bookings[date] = docSnap.exists() ? docSnap.data() : {};
+    } catch(e) { bookings[date] = {}; }
 }
 
 async function loadRestData() {
-  try {
+    const selectedDate = document.getElementById("selectedDate");
     const date = selectedDate.value;
-    const docRef = doc(db, "restData", date);
-    const docSnap = await getDoc(docRef);
-    restData[date] = docSnap.exists() ? docSnap.data().data || [] : [];
-  } catch(e) {
-    console.error("載入休息資料失敗", e);
-    restData[date] = [];
-  }
-  renderRest();
+    try {
+        const docRef = doc(db, "restData", date);
+        const docSnap = await getDoc(docRef);
+        restData[date] = docSnap.exists() ? docSnap.data().data || [] : [];
+    } catch(e) { restData[date] = []; }
 }
 
-function updateStats(){
+function updateStats() {
+    const selectedDate = document.getElementById("selectedDate");
     const date = selectedDate.value;
     const statsBox = document.getElementById("statsBox");
-
-    if(!date || !bookings[date]){
-        statsBox.innerHTML = "今日入住：0 人";
+    
+    if (!date) {
+        statsBox.innerHTML = "<div><b>當日總入住：</b>0 人</div><div style='color:#4f46e5; margin-top:4px;'><b>目前在店：</b>0 人</div>";
         return;
     }
 
-    let totalPeople = 0;
-    let countryStats = {};
-
-    Object.values(bookings[date]).forEach(data => {
-        // ⭐ 只要曾經入住過的人都算
-        if(data.everCheckedIn){
-
-            let people = Number(data.people) || 1;
-            totalPeople += people;
-
-            // 國家判斷（空的 = 台灣）
-            let country = data.country && data.country.trim() !== "" 
-                ? data.country 
-                : "台灣";
-
-            if(!countryStats[country]) countryStats[country] = 0;
-
-            countryStats[country] += people;
-        }
-    });
-
-    let html = `<b>入住總人數：${totalPeople} 人</b><br>`;
-    for(let c in countryStats){
-        html += `${c}：${countryStats[c]} 人<br>`;
+    let dailyTotalPeople = 0;      
+    let currentInHousePeople = 0;  
+    
+    if (bookings[date]) {
+        Object.values(bookings[date]).forEach(data => {
+            let people = Number(data.people) || 0;
+            if (data.everCheckedIn) dailyTotalPeople += people;
+            if (data.status === 'checkedin') currentInHousePeople += people;
+        });
     }
 
+    if (restData[date]) {
+        restData[date].forEach(rest => {
+            let people = Number(rest.people) || 0;
+            dailyTotalPeople += people; 
+            if (rest.status === 'resting') currentInHousePeople += people;
+        });
+    }
+
+    // 將統計區塊設計得更清爽
+    let html = `<div style="margin-bottom:4px;"><b>當日總入住：</b>${dailyTotalPeople} 人</div>`;
+    html += `<div style="color: #4f46e5;"><b>目前在店人數：</b>${currentInHousePeople} 人</div>`;
     statsBox.innerHTML = html;
 }
 
+function updateRestRoomOptions() {
+    const date = document.getElementById("selectedDate").value;
+    const restRoomSelect = document.getElementById("restRoom");
+    const currentBookings = bookings[date] || {};
+    restRoomSelect.innerHTML = '<option value="">選擇房號</option>';
+    rooms.forEach(room => {
+        if (!currentBookings[room]) {
+            const option = document.createElement("option");
+            option.value = room;
+            option.textContent = room;
+            restRoomSelect.appendChild(option);
+        }
+    });
+}
 </script>
 </body>
 </html>
