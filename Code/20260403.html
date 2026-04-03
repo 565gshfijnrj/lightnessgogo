@@ -1,1 +1,1000 @@
 
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>房況管理系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+    * { box-sizing: border-box; font-family: 'Noto Sans TC', sans-serif; }
+
+    body {
+        margin: 0;
+        background: linear-gradient(135deg,#667eea,#764ba2);
+        padding: 15px; /* 手機版間距縮小 */
+    }
+
+    /* 修改這部分，增加上方空間 */
+    .container {
+        background: white;
+        border-radius: 20px;
+        padding: 60px 20px 20px 20px; /* 增加上方 padding 到 60px */
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        max-width: 1000px;
+        margin: 0 auto;
+        position: relative; /* 確保按鈕能準確定位在右上角 */
+    }
+
+    /* 確保按鈕在手機版不會太突兀 */
+    @media (max-width: 600px) {
+        .action-buttons {
+            top: 10px;
+            right: 10px;
+        }
+        .container {
+            padding-top: 70px;
+        }
+    }
+
+    /* ⭐ 新增的按鈕組樣式 */
+    .action-buttons {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    /* 房況網格：手機 1 欄, 平板 2 欄, 電腦 3 欄 */
+    .room-grid {
+        display: grid;
+        grid-template-columns: 1fr; 
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    @media (min-width: 600px) {
+        .room-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (min-width: 900px) {
+        .room-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .room-card {
+        padding: 15px;
+        border-radius: 15px;
+        background: #f3f4f6;
+        cursor: pointer;
+        transition: 0.3s;
+        min-height: 140px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border: 1px solid #eee;
+    }
+
+    .room-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+
+    /* 狀態顏色 */
+    .booked { background: #f6c453 !important; color: #333 !important; }
+    .checkedin { background: #43e97b !important; color: white !important; }
+    .checkedout { background: #555 !important; color: white !important; }
+    .stay-continue { background: #4dabf7 !important; color: white !important; }
+
+    .room-header {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding-bottom: 5px;
+        margin-bottom: 8px;
+    }
+
+    .room-number { font-size: 14px; font-weight: bold; }
+
+    .guest-name-row {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .booking-detail {
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    /* 彈窗(Modal) 手機適配 */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: white;
+        padding: 20px;
+        z-index: 1000;
+        overflow-y: auto;
+        transform: none;
+    }
+
+    @media (min-width: 600px) {
+        .modal {
+            top: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 450px;
+            height: auto;
+            border-radius: 20px;
+        }
+    }
+
+    /* 休息區手機適配 */
+    .rest-section {
+        margin: 30px auto;
+        width: 100%;
+        max-width: 700px;
+    }
+
+    .rest-input {
+        grid-template-columns: 1fr; /* 手機上一欄 */
+    }
+
+    @media (min-width: 500px) {
+        .rest-input { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .header { flex-direction: column; text-align: center; }
+
+    /* 彈窗背景遮罩 */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+    }
+
+    /* 彈窗主體 */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 550px;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        z-index: 1000;
+        max-height: 85vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* 標題區 */
+    .modal-header {
+        padding: 20px 24px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 1.25rem;
+    }
+
+    /* 內容捲動區 */
+    .modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        flex-grow: 1;
+    }
+
+    /* 表單分組 */
+    .form-section {
+        margin-bottom: 24px;
+    }
+
+    .form-section-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6366f1;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #eef2ff;
+        padding-bottom: 4px;
+    }
+
+    /* 輸入框樣式 */
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.875rem;
+        color: #475569;
+        margin-bottom: 6px;
+        font-weight: 500;
+    }
+
+    .modal input, .modal select, .modal textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.2s;
+        background: #fff;
+    }
+
+    .modal input:focus, .modal select:focus, .modal textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .modal input[readonly] {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    /* 雙欄排版 */
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    /* 按鈕區 */
+    .modal-footer {
+        padding: 16px 24px;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-primary:hover { background: #4f46e5; }
+
+    .btn-success { background: #22c55e; color: white; }
+    .btn-success:hover { background: #16a34a; }
+
+    .btn-outline { background: white; border: 1px solid #cbd5e1; color: #475569; }
+    .btn-outline:hover { background: #f1f5f9; }
+
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+
+    @media (max-width: 600px) {
+        .modal { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+        .grid-2 { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+    <div class="header">
+        <img src="logo.jpg" class="logo">
+        <div class="hotel-name">來點子站前旅店</div>
+    </div>
+
+    <div class="container">
+    <div class="action-buttons">
+        <button class="btn btn-primary" onclick="showBookingForm()">📝 住房登記</button>
+        <button class="btn btn-outline" onclick="showRestForm()">🕒 休息登記</button>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>🏨 住房資料</h2>
+        <div id="statsBox" style="text-align:right; font-size:14px;"></div>
+    </div>
+    選擇日期：
+    <input type="date" id="selectedDate">
+
+    <div class="room-grid" id="roomGrid"></div>
+    </div>
+
+    <div id="restCardsArea">
+
+    <div id="restCards"></div>
+
+    </div>
+
+    <div class="modal-overlay" id="modalOverlayRest" onclick="closeModalRest()"></div>
+    <div class="modal" id="restFormModal" style="display: none;">
+        <div class="modal-header">
+            <h3>🕒 休息客登記</h3>
+            <button onclick="closeModalRest()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-section">
+                <div class="form-group">
+                    <label>選擇房號</label>
+                    <select id="restRoom">
+                    <option value="">選擇房號</option>
+                    <option>201</option>
+                    <option>202</option>
+                    <option>203</option>
+                    <option>301</option>
+                    <option>302</option>
+                    <option>303</option>
+                    <option>401</option>
+                    <option>402</option>
+                    <option>403</option>
+                    </select>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>顧客姓名</label>
+                        <input id="restName" placeholder="顧客姓名">
+                    </div>
+                    <div class="form-group">
+                        <label>電話</label>
+                        <input id="restPhone" placeholder="電話">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>人數</label>
+                        <input id="restPeople" type="number" placeholder="人數" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>休息時間</label>
+                        <input id="restTime" placeholder="休息時間 (例:00:00~00:00)">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>金額</label>
+                        <input id="restPrice" type="number" placeholder="金額">
+                    </div>
+                    <div class="form-group">
+                        <label>身分證</label>
+                        <input id="restID" placeholder="身分證">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>出生年月日</label>
+                        <input id="restBirth" placeholder="出生年月日">
+                    </div>
+                    <div class="form-group">
+                        <label>備註</label>
+                        <input id="restNote" placeholder="備註">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModalRest()">取消</button>
+            <button class="btn btn-success" onclick="addRest()">新增休息客</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+
+    <div class="modal" id="formModal" style="display: none;">
+        <div class="modal-header">
+            <h3 id="modalTitle">房號資訊</h3>
+            <button onclick="closeModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="form-section">
+                <div class="form-section-title">基本資訊</div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>接單日期</label>
+                        <input id="orderDate" type="date">
+                    </div>
+                    <div class="form-group">
+                        <label>訂單編號</label>
+                        <input id="orderNumber" placeholder="請輸入編號">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>退房日期</label>
+                    <input id="checkoutDate" type="date">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">住客詳情</div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>客人姓名</label>
+                        <input id="name">
+                    </div>
+                    <div class="form-group">
+                        <label>電話</label>
+                        <input id="phone">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>身分證</label>
+                        <input id="idNumber">
+                    </div>
+                    <div class="form-group">
+                        <label>出生年月日</label>
+                        <input type="date" id="birthday">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>人數</label>
+                        <input id="people" type="number">
+                    </div>
+                    <div class="form-group">
+                        <label>國家</label>
+                        <input id="country" placeholder="預設台灣">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">帳務資訊</div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>總金額</label>
+                        <input id="total" type="number">
+                    </div>
+                    <div class="form-group">
+                        <label>訂金</label>
+                        <input id="deposit" type="number">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>餘額</label>
+                        <input id="balance" type="number" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>付款狀態</label>
+                        <select id="payStatus">
+                            <option value="">未付款</option>
+                            <option value="paid">已付清</option>
+                            <option value="platform">平台已收</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>來源平台</label>
+                    <input id="platform" placeholder="如：Booking, Agoda">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">備註與需求</div>
+                <textarea id="request" rows="3" placeholder="特殊需求..."></textarea>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-danger" onclick="deleteBooking()" style="margin-right:auto;">取消訂單</button>
+            <button class="btn btn-outline" onclick="closeModal()">取消</button>
+            <button class="btn btn-primary" onclick="save()">儲存資料</button>
+            <button class="btn btn-success" onclick="setStatus('checkedin')">辦理入住</button>
+            <button class="btn btn-outline" onclick="setStatus('checkedout')" style="background:#475569; color:white;">退房</button>
+        </div>
+    </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCde1T_hHZOm7__3-1qcQ_NAeAbkz5MdFc",
+    authDomain: "lightnessgogo-2d757.firebaseapp.com",
+    projectId: "lightnessgogo-2d757",
+    storageBucket: "lightnessgogo-2d757.firebasestorage.app",
+    messagingSenderId: "1033105975068",
+    appId: "1:1033105975068:web:915882758685a0d668bcd9",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+function getCurrentDate(){
+    return document.getElementById("selectedDate").value
+}
+const rooms = ["201","202","203","301","302","303","401","402","403"];
+let bookings = {};
+let currentRoom = "";
+let restData = {}
+window.onload = async () => {
+    const grid = document.getElementById("roomGrid");
+
+    rooms.forEach(room=>{
+        const card = document.createElement("div");
+        card.className="room-card";
+        card.innerHTML=`
+            <div class="room-number">房號 ${room}</div>
+            <div class="guest-name"></div>
+            <div class="sub-info"></div>
+        `;
+        card.onclick=()=>openModal(room);
+        grid.appendChild(card);
+    });
+
+    // 設定日期
+    const selectedDate = document.getElementById("selectedDate");
+    selectedDate.value = new Date().toISOString().split("T")[0];
+
+    // 綁定 deposit 與 total 的監聽器
+    const deposit = document.getElementById("deposit");
+    const total = document.getElementById("total");
+    deposit.addEventListener("input", calcBalance);
+    total.addEventListener("input", calcBalance);
+
+    // 讀 Firebase 資料
+    await loadData();
+    await loadRestData();
+};
+function calcBalance(){
+    balance.value = (Number(total.value)||0)-(Number(deposit.value)||0);
+}
+
+window.showBookingForm = function() {
+    // 確保這裡傳入一個識別值，而不是在頁面載入時自動執行
+    openModal("NEW"); 
+}
+
+function openModal(room) {
+    if (!room) return; 
+    if (!selectedDate.value) { alert("請先選日期"); return; }
+    
+    currentRoom = room;
+    modalTitle.innerText = "房號 " + room + " 詳情";
+    
+    document.getElementById("modalOverlay").style.display = "block";
+    document.getElementById("formModal").style.display = "flex";
+
+    const data = bookings[selectedDate.value]?.[room];
+    
+    if (data) {
+        // 確保這些變數是指向 DOM 物件，建議改用 document.getElementById 獲取
+        document.getElementById("orderNumber").value = data.orderNumber || "";
+        document.getElementById("name").value = data.name || "";
+        document.getElementById("phone").value = data.phone || "";
+        document.getElementById("people").value = data.people || "";
+        document.getElementById("idNumber").value = data.idNumber || "";
+        document.getElementById("birthday").value = data.birthday || "";
+        document.getElementById("orderDate").value = data.orderDate || "";
+        document.getElementById("total").value = data.total || "";
+        document.getElementById("deposit").value = data.deposit || "";
+        document.getElementById("balance").value = data.balance || "";
+        document.getElementById("country").value = data.country || "";
+        document.getElementById("platform").value = data.platform || "";
+        document.getElementById("request").value = data.request || "";
+        document.getElementById("payStatus").value = data.payStatus || "";
+    } else {
+        // ✅ 修正後的清空邏輯：避免使用可能衝突的簡寫變數 i
+        const inputIds = [
+            'orderNumber', 'name', 'phone', 'people', 'idNumber', 
+            'birthday', 'orderDate', 'total', 'deposit', 'balance', 
+            'country', 'platform', 'request'
+        ];
+        
+        inputIds.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = ""; 
+            }
+        });
+        
+        const payStatusEl = document.getElementById("payStatus");
+        if (payStatusEl) payStatusEl.value = "";
+    }
+}
+
+window.closeModal = function(){
+    document.getElementById("modalOverlay").style.display = "none";
+    document.getElementById("formModal").style.display = "none";
+}
+
+// ⭐ 新增：顯示休息登記表單
+window.showRestForm = function() {
+    document.getElementById("modalOverlayRest").style.display = "block";
+    document.getElementById("restFormModal").style.display = "flex";
+}
+
+// ⭐ 新增：關閉休息登記表單
+window.closeModalRest = function() {
+    document.getElementById("modalOverlayRest").style.display = "none";
+    document.getElementById("restFormModal").style.display = "none";
+}
+
+window.save = async function(){
+
+    const checkin = document.getElementById("selectedDate").value;
+    const checkout = document.getElementById("checkoutDate").value;
+
+    if(!checkin || !checkout){
+        alert("請選擇入住與退房日期");
+        return;
+    }
+
+    let current = new Date(checkin);
+    const end = new Date(checkout);
+
+    let dayIndex = 0;
+
+    while(current < end){
+
+        const date = current.toISOString().split("T")[0];
+
+        if(!bookings[date]) bookings[date] = {};
+
+        const oldData = bookings[date]?.[currentRoom] || {};
+
+        let status = dayIndex === 0 ? "booked" : "stay";
+
+        bookings[date][currentRoom] = {
+            ...oldData,
+
+            orderNumber: document.getElementById("orderNumber").value.trim(),
+            name: document.getElementById("name").value.trim(),
+            phone: document.getElementById("phone").value,
+            idNumber: document.getElementById("idNumber").value,
+            birthday: document.getElementById("birthday").value,
+            people: document.getElementById("people").value,
+            total: document.getElementById("total").value,
+            deposit: document.getElementById("deposit").value,
+            balance: document.getElementById("balance").value,
+            country: document.getElementById("country").value,
+            platform: document.getElementById("platform").value,
+            request: document.getElementById("request").value,
+            payStatus: document.getElementById("payStatus").value,
+
+            status: oldData.status || status,
+            everCheckedIn: oldData.everCheckedIn || false,
+
+            checkinDate: checkin,
+            checkoutDate: checkout
+        };
+
+        await setDoc(doc(db, "bookings", date), bookings[date]);
+
+        current.setDate(current.getDate() + 1);
+        dayIndex++;
+    }
+
+    updateUI();
+    closeModal();
+}
+window.setStatus = async function(status){
+
+    const date = document.getElementById("selectedDate").value;
+    const data = bookings[date]?.[currentRoom];
+
+    if(!data) return;
+
+    const checkin = new Date(data.checkinDate);
+    const checkout = new Date(data.checkoutDate);
+
+    let current = new Date(checkin);
+
+    while(current < checkout){
+
+        const d = current.toISOString().split("T")[0];
+
+        if(bookings[d]?.[currentRoom]){
+
+            bookings[d][currentRoom].status = status;
+
+            if(status === "checkedin" || status === "checkedout"){
+                bookings[d][currentRoom].everCheckedIn = true;
+            }
+
+            await setDoc(doc(db, "bookings", d), bookings[d]);
+        }
+
+        current.setDate(current.getDate() + 1);
+    }
+
+    updateUI();
+    closeModal();
+}
+
+window.deleteBooking = async function(){
+
+    const date = document.getElementById("selectedDate").value;
+    const data = bookings[date]?.[currentRoom];
+
+    if(!data) return;
+
+    if(confirm("確定要取消此訂單嗎？")){
+
+        let current = new Date(data.checkinDate);
+        const end = new Date(data.checkoutDate);
+
+        while(current < end){
+
+            const d = current.toISOString().split("T")[0];
+
+            if(bookings[d]){
+                delete bookings[d][currentRoom];
+                await setDoc(doc(db, "bookings", d), bookings[d]);
+            }
+
+            current.setDate(current.getDate() + 1);
+        }
+
+        updateUI();
+        closeModal();
+    }
+}
+
+    function updateUI(){
+        const date = selectedDate.value;
+
+        document.querySelectorAll(".room-card").forEach((card, i) => {
+            const room = rooms[i];
+            const data = bookings[date]?.[room];
+            
+            // 重置樣式
+            card.className = "room-card";
+            card.innerHTML = "";
+
+            if(data){
+                // 計算天數
+                const checkin = new Date(data.checkinDate);
+                const checkout = new Date(data.checkoutDate);
+                const totalNights = Math.round((checkout - checkin) / (1000*60*60*24));
+                
+                // 收款狀態判斷
+                let payText = "";
+                if(data.payStatus === "paid") payText = "✅ 已付清";
+                else if(data.payStatus === "platform") payText = "🏦 平台已收";
+                else payText = (Number(data.balance) <= 0) ? "✅ 已收訖" : `❌ 未收: $${data.balance}`;
+
+                // 套用顏色狀態
+                card.classList.add(data.status || "booked");
+                if(data.status === "stay") card.classList.add("stay-continue");
+
+                card.innerHTML = `
+                    <div class="room-header">
+                        <span class="room-number">房號 ${room}</span>
+                        <span style="font-size:12px;">${data.status === 'checkedin' ? '🟢入住中' : '🟡預訂'}</span>
+                    </div>
+                    <div class="guest-name-row">
+                        ${data.name || '未填'} | <span style="font-size:14px;">${data.orderNumber || '無編號'} (${data.platform || '現場'})</span>
+                    </div>
+                    <div class="booking-detail">
+                        入住：${data.checkinDate}<br>
+                        退房：${data.checkoutDate}<br>
+                        共 ${totalNights} 晚 ｜ ${payText}
+                    </div>
+                `;
+            } else {
+                card.innerHTML = `
+                    <div class="room-header"><span class="room-number">房號 ${room}</span></div>
+                    <div class="guest-name" style="text-align:center; color:#ccc; margin-top:10px;">( 空房 )</div>
+                `;
+            }
+        });
+        updateStats();
+    }
+
+document.getElementById("selectedDate").addEventListener("change", async () => {
+    await loadData();      // 讀住房資料
+    await loadRestData();  // 讀休息資料
+});
+
+window.addRest = async function(){
+    let date = getCurrentDate()
+    if(!date){
+        alert("請先選擇日期")
+        return;
+    }
+    
+    let room = document.getElementById("restRoom").value
+    let name = document.getElementById("restName").value
+    let phone = document.getElementById("restPhone").value
+    let time = document.getElementById("restTime").value
+    let price = Number(document.getElementById("restPrice").value) || 0;
+    let restPeople = Number(document.getElementById("restPeople").value) || 1;
+
+    if(name=="" || room==""){
+        alert("請填寫房號與姓名")
+        return;
+    }
+
+    
+
+    let rest = {
+        room:room,
+        name:name,
+        phone:phone,
+        people: restPeople,
+        time:time,
+        price:price,
+        id:document.getElementById("restID").value,
+        birth:document.getElementById("restBirth").value,
+        note:document.getElementById("restNote").value,
+        status:"resting"
+    }
+
+    if(!restData[date]){
+        restData[date]=[];
+    }
+
+    restData[date].push(rest);
+    // ⭐ 存到 Firebase
+     try {
+        await setDoc(doc(db, "restData", date), { data: restData[date] });
+    } catch(e) {
+        console.error("存休息房資料失敗", e);
+        alert("Firebase 存檔失敗，請檢查控制台");
+    }
+    renderRest();
+    closeModalRest(); // 新增完畢後關閉彈窗
+
+    // 清空輸入欄位
+    document.getElementById("restRoom").value=""
+    document.getElementById("restName").value=""
+    document.getElementById("restPhone").value=""
+    document.getElementById("restPeople").value = 0;
+    document.getElementById("restTime").value=""
+    document.getElementById("restPrice").value=""
+    document.getElementById("restID").value=""
+    document.getElementById("restBirth").value=""
+    document.getElementById("restNote").value=""
+}
+function renderRest(){
+    let date = getCurrentDate();
+    let area = document.getElementById("restCards");
+    area.innerHTML = "";
+
+    if(!restData[date]) return;
+
+    restData[date].forEach((r, i) => {
+        let color = r.status=="resting" ? "resting" : "checkout";
+
+        let cardDiv = document.createElement("div");
+        cardDiv.className = `rest-card ${color}`;
+
+        cardDiv.innerHTML = `
+            <div class="rest-room">房號 ${r.room}</div>
+            姓名: ${r.name}<br>
+            電話: ${r.phone}<br>
+            人數: ${r.people}<br>
+            身分證: ${r.id}<br>
+            生日: ${r.birth}<br>
+            休息: ${r.time}<br>
+            金額: ${r.price}<br>
+            備註: ${r.note}<br>
+        `;
+
+        let checkoutBtn = document.createElement("button");
+        checkoutBtn.textContent = "結束休息";
+        checkoutBtn.addEventListener("click", () => checkoutRest(i));
+
+        let deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "刪除資料";
+        deleteBtn.addEventListener("click", () => deleteRest(i));
+
+        cardDiv.appendChild(checkoutBtn);
+        cardDiv.appendChild(deleteBtn);
+
+        area.appendChild(cardDiv);
+    });
+}
+
+async function checkoutRest(index){
+
+    let date = getCurrentDate()
+
+    restData[date][index].status="checkout"
+    // 更新 Firebase
+        await setDoc(doc(db, "restData", date), { data: restData[date] || [] });
+        renderRest()
+}
+async function deleteRest(index){
+
+    let date = getCurrentDate()
+
+    if(confirm("確定要刪除這筆休息資料嗎？")){
+
+        restData[date].splice(index,1)
+        // 更新 Firebase
+        await setDoc(doc(db, "restData", date), { data: restData[date] || [] });
+        renderRest()
+
+    }
+}
+
+async function loadData() {
+  const date = document.getElementById("selectedDate").value; // ✅ 提到外面
+
+  try {
+    const docRef = doc(db, "bookings", date);
+    const docSnap = await getDoc(docRef);
+    bookings[date] = docSnap.exists() ? docSnap.data() : {};
+  } catch(e) {
+    console.error("載入入住資料失敗", e);
+    bookings[date] = {}; // ✅ 不會爆了
+  }
+
+  updateUI();
+}
+
+async function loadRestData() {
+  try {
+    const date = selectedDate.value;
+    const docRef = doc(db, "restData", date);
+    const docSnap = await getDoc(docRef);
+    restData[date] = docSnap.exists() ? docSnap.data().data || [] : [];
+  } catch(e) {
+    console.error("載入休息資料失敗", e);
+    restData[date] = [];
+  }
+  renderRest();
+}
+
+function updateStats(){
+    const date = selectedDate.value;
+    const statsBox = document.getElementById("statsBox");
+
+    if(!date || !bookings[date]){
+        statsBox.innerHTML = "今日入住：0 人";
+        return;
+    }
+
+    let totalPeople = 0;
+    let countryStats = {};
+
+    Object.values(bookings[date]).forEach(data => {
+        // ⭐ 只要曾經入住過的人都算
+        if(data.everCheckedIn){
+
+            let people = Number(data.people) || 1;
+            totalPeople += people;
+
+            // 國家判斷（空的 = 台灣）
+            let country = data.country && data.country.trim() !== "" 
+                ? data.country 
+                : "台灣";
+
+            if(!countryStats[country]) countryStats[country] = 0;
+
+            countryStats[country] += people;
+        }
+    });
+
+    let html = `<b>入住總人數：${totalPeople} 人</b><br>`;
+    for(let c in countryStats){
+        html += `${c}：${countryStats[c]} 人<br>`;
+    }
+
+    statsBox.innerHTML = html;
+}
+
+</script>
+</body>
+</html>
