@@ -42,6 +42,14 @@ body {
 .booked { background: #f6c453; color: white; }
 .checkedin { background: #43e97b; color: white; }
 .checkedout { background: #555; color: white; }
+.checkout-today {
+    background: #ff6b6b !important;
+    color: white;
+}
+.stay-continue {
+    background: #4dabf7 !important;
+    color: white;
+}
 
 .room-number {
     font-size: 13px;
@@ -320,8 +328,14 @@ button {
 <div class="modal" id="formModal">
 <h3 id="modalTitle"></h3>
 
+接單日期
+<input id="orderDate" type="date"><br>
+
 訂單編號
 <input id="orderNumber"><br>
+
+退房日期
+<input id="checkoutDate" type="date"><br>
 
 客人姓名
 <input id="name"><br>
@@ -337,9 +351,6 @@ button {
 
 入住人數
 <input id="people" type="number"><br>
-
-訂單日期
-<input id="orderDate" type="date"><br>
 
 總金額
 <input id="total" type="number"><br>
@@ -460,75 +471,128 @@ function openModal(room){
     }
 }
 
-function closeModal(){
+window.closeModal = function(){
     formModal.style.display="none";
 }
 
-async function save(){
+window.save = async function(){
+
+    const checkin = document.getElementById("selectedDate").value;
+    const checkout = document.getElementById("checkoutDate").value;
+
+    if(!checkin || !checkout){
+        alert("請選擇入住與退房日期");
+        return;
+    }
+
+    let current = new Date(checkin);
+    const end = new Date(checkout);
+
+    let dayIndex = 0;
+
+    while(current < end){
+
+        const date = current.toISOString().split("T")[0];
+
+        if(!bookings[date]) bookings[date] = {};
+
+        const oldData = bookings[date]?.[currentRoom] || {};
+
+        let status = dayIndex === 0 ? "booked" : "stay";
+
+        bookings[date][currentRoom] = {
+            ...oldData,
+
+            orderNumber: document.getElementById("orderNumber").value.trim(),
+            name: document.getElementById("name").value.trim(),
+            phone: document.getElementById("phone").value,
+            idNumber: document.getElementById("idNumber").value,
+            birthday: document.getElementById("birthday").value,
+            people: document.getElementById("people").value,
+            total: document.getElementById("total").value,
+            deposit: document.getElementById("deposit").value,
+            balance: document.getElementById("balance").value,
+            country: document.getElementById("country").value,
+            platform: document.getElementById("platform").value,
+            request: document.getElementById("request").value,
+            payStatus: document.getElementById("payStatus").value,
+
+            status: oldData.status || status,
+            everCheckedIn: oldData.everCheckedIn || false,
+
+            checkinDate: checkin,
+            checkoutDate: checkout
+        };
+
+        await setDoc(doc(db, "bookings", date), bookings[date]);
+
+        current.setDate(current.getDate() + 1);
+        dayIndex++;
+    }
+
+    updateUI();
+    closeModal();
+}
+window.setStatus = async function(status){
 
     const date = document.getElementById("selectedDate").value;
+    const data = bookings[date]?.[currentRoom];
 
-    if(!bookings[date]) bookings[date] = {};
+    if(!data) return;
 
-    const nameValue = document.getElementById("name").value.trim();
-    const orderNumberValue = document.getElementById("orderNumber").value.trim();
+    const checkin = new Date(data.checkinDate);
+    const checkout = new Date(data.checkoutDate);
 
-    bookings[date][currentRoom] = {
-        orderNumber: orderNumberValue,
-        name: nameValue,
-        phone: document.getElementById("phone").value,
-        idNumber: document.getElementById("idNumber").value,
-        birthday: document.getElementById("birthday").value,
-        people: document.getElementById("people").value,
-        orderDate: document.getElementById("orderDate").value,
-        total: document.getElementById("total").value,
-        deposit: document.getElementById("deposit").value,
-        balance: document.getElementById("balance").value,
-        country: document.getElementById("country").value,
-        platform: document.getElementById("platform").value,
-        request: document.getElementById("request").value,
-        payStatus: document.getElementById("payStatus").value,
-        status: "booked"
-    };
-    if(document.getElementById("payStatus").value === "paid"){
-    document.getElementById("balance").value = 0;
-}
-// ⭐ 存到 Firebase
-  await setDoc(doc(db, "bookings", date), bookings[date]);
+    let current = new Date(checkin);
+
+    while(current < checkout){
+
+        const d = current.toISOString().split("T")[0];
+
+        if(bookings[d]?.[currentRoom]){
+
+            bookings[d][currentRoom].status = status;
+
+            if(status === "checkedin" || status === "checkedout"){
+                bookings[d][currentRoom].everCheckedIn = true;
+            }
+
+            await setDoc(doc(db, "bookings", d), bookings[d]);
+        }
+
+        current.setDate(current.getDate() + 1);
+    }
+
     updateUI();
     closeModal();
 }
 
-function setStatus(status){
-    const date = selectedDate.value;
+window.deleteBooking = async function(){
 
-    if(bookings[date]?.[currentRoom]){
+    const date = document.getElementById("selectedDate").value;
+    const data = bookings[date]?.[currentRoom];
 
-        bookings[date][currentRoom].status = status;
+    if(!data) return;
 
-        // ⭐ 退房也算已入住
-        if(status === "checkedin" || status === "checkedout"){
-            bookings[date][currentRoom].everCheckedIn = true;
+    if(confirm("確定要取消此訂單嗎？")){
+
+        let current = new Date(data.checkinDate);
+        const end = new Date(data.checkoutDate);
+
+        while(current < end){
+
+            const d = current.toISOString().split("T")[0];
+
+            if(bookings[d]){
+                delete bookings[d][currentRoom];
+                await setDoc(doc(db, "bookings", d), bookings[d]);
+            }
+
+            current.setDate(current.getDate() + 1);
         }
 
         updateUI();
         closeModal();
-    }
-}
-
-function deleteBooking(){
-
-    const date = document.getElementById("selectedDate").value;
-
-    if(bookings[date] && bookings[date][currentRoom]){
-
-        if(confirm("確定要取消此訂單嗎？")){
-
-            delete bookings[date][currentRoom];
-
-            updateUI();
-            closeModal();
-        }
     }
 }
 
@@ -547,13 +611,64 @@ function updateUI(){
         const room = rooms[i];
         const data = bookings[date]?.[room];
 
+        let nightText = "";
+        let stayType = "";
+
+if(data && data.checkinDate && data.checkoutDate){
+
+    const checkin = new Date(data.checkinDate);
+    const checkout = new Date(data.checkoutDate);
+    const today = new Date(date);
+
+    const diffDays = Math.floor((today - checkin) / (1000*60*60*24)) + 1;
+    const totalDays = Math.floor((checkout - checkin) / (1000*60*60*24));
+
+    nightText = `第${diffDays}晚 / 共${totalDays}晚`;
+
+    if(diffDays === 1){
+        stayType = "🆕 首日入住";
+    }
+    else if(diffDays === totalDays){
+        stayType = "⚠️ 今日退房";
+    }
+    else{
+        stayType = "🔵 續住中";
+    }
+}
+
         if(data){
 
             // ⭐ 防止 undefined
             const guestName = data.name ? data.name : "（未填姓名）";
             const orderNo = data.orderNumber ? data.orderNumber : "未填編號";
+            
+            // ⭐ 每次先清空所有顏色（超重要）
 
-            card.classList.add(data.status || "booked");
+            card.className = "room-card";
+
+            if(data){
+
+                switch(data.status){
+                    case "booked":
+                    card.classList.add("booked");
+                    break;
+
+                    case "checkedin":
+                    card.classList.add("checkedin");
+                    break;
+
+                    case "checkedout":
+                    card.classList.add("checkedout");
+                    break;
+
+                    case "stay":
+                    card.classList.add("stay-continue");
+                    break;
+
+                    default:
+                    card.classList.add("booked");
+                }
+            }
 
             guestEl.innerText = guestName;
 
@@ -579,7 +694,9 @@ function updateUI(){
             "訂單編號："+orderNo+
             " ｜ "+platformText+
             " ｜ "+payText+
-            " ｜ "+statusText;
+            " ｜ "+statusText+
+            (nightText ? " ｜ "+nightText : "")+
+            (stayType ? " ｜ "+stayType : "");
         }else{
     card.classList.remove("booked","checkedin","checkedout");
     card.querySelector(".guest-name").innerText = "空房";
@@ -590,12 +707,12 @@ function updateUI(){
     updateStats();
 }
 
-selectedDate.addEventListener("change", async () => {
+document.getElementById("selectedDate").addEventListener("change", async () => {
     await loadData();      // 讀住房資料
     await loadRestData();  // 讀休息資料
 });
 
-async function addRest(){
+window.addRest = async function(){
     let date = getCurrentDate()
     if(!date){
         alert("請先選擇日期")
@@ -718,15 +835,17 @@ async function deleteRest(index){
 }
 
 async function loadData() {
+  const date = document.getElementById("selectedDate").value; // ✅ 提到外面
+
   try {
-    const date = selectedDate.value;
     const docRef = doc(db, "bookings", date);
     const docSnap = await getDoc(docRef);
     bookings[date] = docSnap.exists() ? docSnap.data() : {};
   } catch(e) {
     console.error("載入入住資料失敗", e);
-    bookings[date] = {};
+    bookings[date] = {}; // ✅ 不會爆了
   }
+
   updateUI();
 }
 
